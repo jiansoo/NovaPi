@@ -56,17 +56,30 @@ def find_and_split(full, search):
     tokenise_input = whitespaceTokeniser.tokenize(full)
 
     # Searching for term in tokenised input... Lazy, but it works.
-    for i in range(len(tokenise_input)):
-        # If the search is positive, sends back the term and all words after it. Simple array slice.
-        if search == tokenise_input[i]:
-            command_contents = tokenise_input[i+1:]
-            return command_contents
+    
+    # Special case for extensions with multiple operatives
+    if type(search) is list:
+        for term in search:
+            for i in range(len(tokenise_input)):
+                # If the search is positive, sends back the term and all words after it. Simple array slice.
+                if term == tokenise_input[i]:
+                    command_contents = tokenise_input[i+1:]
+                    return command_contents, term
+        # If there's no matching term, return None.
+        return None
+    
+    else:
+        for i in range(len(tokenise_input)):
+            # If the search is positive, sends back the term and all words after it. Simple array slice.
+            if search == tokenise_input[i]:
+                command_contents = tokenise_input[i+1:]
+                return command_contents
 
         # If there's no matching term, return None.
-        else:
-            return None
+        return None
 
 def say(voiceoutput):
+    print(voiceoutput)
     if not os.path.isfile('spokenaudio/'+voiceoutput+'.mp3'):
         tts = gTTS(voiceoutput)
         tts.save('spokenaudio/'+voiceoutput+'.mp3')

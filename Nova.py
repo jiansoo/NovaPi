@@ -55,13 +55,15 @@ def ascertain_command():
     
     voiceInput = voiceInput.lower()
     
+    if 'good morning' == voiceInput:
+        say('Good morning, Jian.')
+    
     for i in extension_objects:
         print(find_and_split(voiceInput,i.operative))
         if find_and_split(voiceInput,i.operative) is not None:
             i.parse(find_and_split(voiceInput,i.operative))
 
-    elif 'good morning' == voiceInput:
-        say('Good morning, Jian.')
+    
         
     if sv.playing:
         sp.startPlayback()

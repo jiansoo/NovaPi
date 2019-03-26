@@ -1,2 +1,1 @@
-class playing:
-    playing = False
+playing = False
