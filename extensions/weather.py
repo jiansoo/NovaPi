@@ -4,7 +4,7 @@
 
 # Add /modules as a path variable
 import sys
-sys.path.append('../modules')
+sys.path.append('.\modules')
 
 # Import modules
 from forecastiopy import *
@@ -14,6 +14,9 @@ import os
 from utils import *
 import herepy
 import random
+import dateutil.parser
+import datetime
+from wit import Wit
 
 class Extension:
     # Standard extension class variables
@@ -29,7 +32,7 @@ class Extension:
     'herepy_app_code': 'ADD_API_KEY_HERE'
     }
         
-    extOperative = ['weather', 'rain']
+    extIntent = ['findWeather', 'findRainChance']
     
     # Config file heavy lifting:
     
@@ -47,12 +50,12 @@ class Extension:
 
     # Extension methods
     def __init__(self):
-        self.operative = Extension.extOperative
+        self.intent = Extension.extIntent
     
     def getForecaster(self, location):
         # Get coordinates from address.
         geocoderApi = herepy.GeocoderApi(Extension.herepy_appId, Extension.herepy_appCode)
-        jsonResponse = geocoderApi.free_form(' '.join(location))
+        jsonResponse = geocoderApi.free_form(location)
         coords = jsonResponse.as_dict()['Response']['View'][0]['Result'][0]['Location']['NavigationPosition'][0]
 
         # Making ForecastIO object from coordinates.
@@ -65,21 +68,23 @@ class Extension:
         daily = FIODaily.FIODaily(forecaster)
 
         if days == 0:
-
             targetDay = {'summary': hourly.summary, 'icon': hourly.icon}
+            speech = hourly.summary
             # Say current temperature and humidity.
             speechCurrently = 'At ' + ' '.join(location) + ' it is currently ' + str(round(currently.temperature,1)) + ' degrees Celsius, with ' + str(round(currently.humidity*100)) + ' percent humidity.'
             say(speechCurrently)
     
         elif days <= daily.days():
             targetDay = daily.get_day(days)
+            speech = targetDay['summary']
         
         else: 
             say('Please ask for a day less than 7 days in the future.')
             return
         
+        
         # Say current summary.
-        say(targetDay['summary'])
+        say(speech)
 
         if targetDay['icon'] == 'clear-day':
             opinion = ["A nice clear day.",
@@ -167,15 +172,6 @@ class Extension:
 
         # Give a quip after the weather status.
         say(random.choice(opinion))
-    
-    def summaryWeek(self, location):
-        forecaster = self.getForecaster(location)
-
-        currently = FIOCurrently.FIOCurrently(forecaster)
-        daily = FIODaily.FIODaily(forecaster)
-
-        # Say current summary.
-        say(daily.summary)
 
     def rainChance(self, location, day):
         forecaster = self.getForecaster(location)
@@ -184,7 +180,7 @@ class Extension:
         if day <= daily.days():
             rainprob = daily.get_day(day)['precipProbability']*100
             if day == 0:
-                rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain today.'
+                rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain today.' 
             elif day == 1:
                 rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain tomorrow.'
             elif day == 2:
@@ -198,67 +194,23 @@ class Extension:
         say(rainString)
 
     # General 'parse' command: interprets voice input 
-    def parse(self, copArray):
-        command, operative = copArray
-        if operative == 'weather':
-            # What's the weather like in ... today?
-            if command[0] == 'like' and command[1] == 'in' and (command[:-1] == 'today?' or command[:-1] == 'today'):
-                self.summaryInDays(command[2:-1], 0)
+    def parse(self, witResponse, intent):
+        # Load intent information from json
+        location = witResponse['entities']['location'][0]['value']
+        time = witResponse['entities']['datetime'][0]['value']
 
-            # What's the weather like in ... tomorrow?
-            elif command[0] == 'like' and command[1] == 'in' and (command[:-1] == 'tomorrow?' or command[:-1] == 'tomorrow'):
-                self.summaryInDays(command[2:-1], 1)
-            
-            # What's the weather like in ... in ... days?
-            elif command[0] == 'like' and command[1] == 'in' and command[:-3] == 'in' and (command[:-1] == 'days?' or command[:-1] == 'days'):
-                self.summaryInDays(command[2:-3], int(command[-2]))
+        # Find delta in days from current date to requested date.
+        dayDelta = (dateutil.parser.parse(time, ignoretz=True)-datetime.datetime.now()+datetime.timedelta(days=1)).days
 
-            # What's the weather like today in ...?
-            elif command[0] == 'like' and command[1] == 'today' and command[2] == 'in':
-                self.summaryInDays(command[3:], 0)
-            
-            # What's the weather like tomorrow in ...?
-            elif command[0] == 'like' and command[1] == 'tomorrow' and command[2] == 'in':
-                self.summaryInDays(command[3:], 1)
+        if intent == 'findWeather':
+            self.summaryInDays(location, dayDelta)
+        elif intent == 'findRainChance':
+            self.rainChance(location, dayDelta)
 
-            # What's the weather like in ... days in ... ?
-            elif command[0] == 'like' and command[1] == 'in' and command[3] == 'days' and command[4] == 'in':
-                self.summaryInDays(command[5:], int(command[2]))
+dsw = Extension()
 
-            # What's the weather like in ... this week?
-            elif command[0] == 'like' and command[1] == 'in' and command[:-2] == 'this' and (command[:-1] == 'week?' or command[:-1] == 'week'):
-                self.summaryWeek(command[2:-2])
+witClient = Wit('OKGTBYQPDTLR5JGMPCVAPEDTUFFWA257')
 
-            # What's the weather like this week in ... ?
-            elif command[0] == 'like' and command[1] == 'this' and command[2] == 'week' and command[3] == 'in':
-                self.summaryWeek(command[4:])
+witResponse = witClient.message('Will it rain in Moscow this Friday?')
 
-            # What's the weather like in ... ?
-            elif command[0] == 'like' and command[1] == 'in':
-                self.summaryInDays(command[2:], 0)
-
-        elif operative == 'rain':
-            # Will it rain in ... days in ... ?
-            # What is the probability it will rain in ... days in ... ?
-            if command[0] == 'in' and command[2] == 'days' and command[3] == 'in':
-                self.rainChance(command[4:], int(command[1]))
-            
-            # What/will ... rain tomorrow in ... ?
-            elif command[0] == 'tomorrow' and command[1] == 'in':
-                self.rainChance(command[2:], 1)
-            
-            # What/will ... rain in ... tomorrow?
-            elif command[0] == 'in' and (command[-1] == 'tomorrow?' or command[-1] == 'tomorrow'):
-                self.rainChance(command[1:-1], 1)
-            
-            # What/will ... rain today in ... ?
-            elif command[0] == 'today' and command[1] == 'in':
-                self.rainChance(command[2:], 0)
-            
-            # What/will ... rain in ... today?
-            elif command[0] == 'in' and (command[-1] == 'today?' or command[-1] == 'today'):
-                self.rainChance(command[1:-1], 0)
-
-            # What/will ... rain in ... in ... days?
-            elif command[0] == 'in' and command[-3] == 'in' and (command[-1] == 'days?' or command[-1] == 'days'):
-                self.rainChance(command[1:-3], int(command[-2]))
+dsw.parse(witResponse, witResponse['entities']['intent'][0]['value'])

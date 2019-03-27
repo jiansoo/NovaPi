@@ -5,6 +5,8 @@ import sys
 sys.path.append('modules')
 sys.path.append('extensions')
 
+from wit import Wit
+
 from utils import *
 
 import sharedvalues as sv
@@ -18,13 +20,26 @@ from bulbmanager import BulbManager
 from weather import returnForecast
 import datetime
 
+import configparser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+if not config.has_section('Nova'):
+        config['Nova'] = {'wit_api_key': 'ADD_API_KEY_HERE'}
+        config.write(open('config.ini', 'a'))
+
+wit_api_key = config['Nova']['wit_api_key']
+
+witClient = Wit(wit_api_key)
+
 bm = BulbManager()
 sp = spw.SpotifyWrapper()
 
 interrupted = False
 playing = False
 
-extensions = ['spotify']
+extensions = ['spotify', 'weather']
 loaded_extensions = []
 extension_objects = []
 
@@ -55,16 +70,20 @@ def ascertain_command():
     
     voiceInput = voiceInput.lower()
     
+    witResponse = witClient.message(voiceInput)
+
     if 'good morning' == voiceInput:
         say('Good morning, Jian.')
     
     for i in extension_objects:
-        print(find_and_split(voiceInput,i.operative))
-        if find_and_split(voiceInput,i.operative) is not None:
-            i.parse(find_and_split(voiceInput,i.operative))
+        if type(i.extIntent) is list:
+            for intent in i.extIntent:
+                if witResponse['entities']['intent'][0]['value'] == intent:
+                    i.parse(witResponse, intent)
+        else:
+            if witResponse['entities']['intent'][0]['value'] == i.extIntent:
+                    i.parse(witResponse, i.extIntent)
 
-    
-        
     if sv.playing:
         sp.startPlayback()
 
