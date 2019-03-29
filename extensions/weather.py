@@ -4,7 +4,7 @@
 
 # Add /modules as a path variable
 import sys
-sys.path.append('.\modules')
+sys.path.append('../modules')
 
 # Import modules
 from forecastiopy import *
@@ -78,8 +78,12 @@ class Extension:
             targetDay = daily.get_day(days)
             speech = targetDay['summary']
         
-        else: 
+        elif days > daily.days(): 
             say('Please ask for a day less than 7 days in the future.')
+            return
+        
+        elif days < 0:
+            say('Weather history is currently not supported.')
             return
         
         
@@ -187,6 +191,9 @@ class Extension:
                 rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain the day after tomorrow.'
             else:
                 rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain in ' + str(day) + ' days.'
+        elif day < 0:
+            say('Weather history is currently not supported.')
+            return
         else:
             say('Please ask for a day less than 7 days in the future.')
             return
@@ -195,22 +202,29 @@ class Extension:
 
     # General 'parse' command: interprets voice input 
     def parse(self, witResponse, intent):
-        # Load intent information from json
+        # Load intent information from json.
+
+        # Location = (resolved) location
+        # Time = datetime object of target time
+
         location = witResponse['entities']['location'][0]['value']
-        time = witResponse['entities']['datetime'][0]['value']
+        
+        # Try interpreting response as single datetime object.
+        # If input such as 'this weekend' is used, wit.ai returns a range... which throws an error here.
+        try:
+            time = witResponse['entities']['datetime'][0]['value']
+        except:
+            # If you say 'this weekend', we take the average between the to and from datetimes.
+            timeTo = witResponse['entities']['datetime'][0]['to']['value']
+            timeFrom = witResponse['entities']['datetime'][0]['from']['value']
+            # Parse time to datetime format and find midpoint. a + (b - a)/2
+            time = dateutil.parser.parse(timeFrom, ignoretz=True) + (dateutil.parser.parse(timeTo, ignoretz=True)-dateutil.parser.parse(timeFrom, ignoretz=True))/2
 
         # Find delta in days from current date to requested date.
         dayDelta = (dateutil.parser.parse(time, ignoretz=True)-datetime.datetime.now()+datetime.timedelta(days=1)).days
-
+        
+        # Invokes methods depending on detected intent.
         if intent == 'findWeather':
             self.summaryInDays(location, dayDelta)
         elif intent == 'findRainChance':
             self.rainChance(location, dayDelta)
-
-dsw = Extension()
-
-witClient = Wit('OKGTBYQPDTLR5JGMPCVAPEDTUFFWA257')
-
-witResponse = witClient.message('Will it rain in Moscow this Friday?')
-
-dsw.parse(witResponse, witResponse['entities']['intent'][0]['value'])

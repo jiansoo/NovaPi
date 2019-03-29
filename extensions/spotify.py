@@ -24,10 +24,13 @@ class Extension:
     
     # Settings to store in config; use dictionary format.
     # Values can be referenced to as config[<extension name>][<key>].
-    extSettings = {'client_id': 'ADD_CLIENT_ID_HERE',
-                 'client_secret': 'ADD_CLIENT_SECRET_HERE'}
+    extSettings = {
+        'user_id': 'ADD_USER_ID_HERE',
+        'client_id': 'ADD_CLIENT_ID_HERE', 
+        'client_secret': 'ADD_CLIENT_SECRET_HERE'
+        }
         
-    extOperative = 'play'
+    extIntent = ['playMusic', 'playPlaylist']
     
     # Config file heavy lifting:
     
@@ -41,7 +44,7 @@ class Extension:
     # Beyond this point are extension-specific class variables
     scope = 'playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private streaming ugc-image-upload user-follow-modify user-follow-read user-library-read user-library-modify user-read-private user-read-birthdate user-read-email user-top-read user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-recently-played'
 
-    token = util.prompt_for_user_token('jiansoo', scope, config['Spotify']['client_id'],
+    token = util.prompt_for_user_token(config['Spotify']['user_id'], scope, config['Spotify']['client_id'],
                                        config['Spotify']['client_secret'],
                                        redirect_uri='http://localhost/')
 
@@ -49,7 +52,7 @@ class Extension:
     
     # Extension methods
     def __init__(self):
-        self.operative = Extension.extOperative
+        self.intent = Extension.extIntent
 
     def startPlayback(self):
         print('Started playback')
@@ -73,30 +76,18 @@ class Extension:
         self.sp.start_playback(context_uri=result_uri)
     
     # General 'parse' command: interprets voice input 
-    def parse(self, command):
-        # Play music
-        if command[0] == 'music':
-            say('Playing music.')
-            self.startPlayback()
-            sv.playing = True
-            
-        # Play playlist ...
-        elif command[0] == 'playlist':
-            searchterm = ' '.join(command[1:])
-            say('Playing' + searchterm)
-            self.searchPlaylist(searchterm)
-            sv.playing = True
-        
-        # Play ... playlist
-        elif command[-1] == 'playlist':
-            searchterm = ' '.join(command[:-1])
-            say('Playing' + searchterm)
-            self.searchPlaylist(searchterm)
-            sv.playing = True
-        
-        # Play ...
-        else:
-            searchterm = ' '.join(command)
-            say('Playing' + searchterm)
-            self.searchTrack(searchterm)
-            sv.playing = True
+    def parse(self, witResponse, intent):
+        # Invokes methods depending on detected intent.
+
+        # Track - track/playlist name
+        # Artist - artist
+        # Intent - detected intent by wit.ai model
+        if intent == 'playMusic':
+            track = witResponse['entities']['track'][0]['value']
+            artist = witResponse['entities']['artist'][0]['value']
+            self.searchTrack(track + ' ' + artist)
+        elif intent == 'playPlaylist':
+            playlist = witResponse['entities']['track'][0]['value']
+            self.searchPlaylist(playlist)
+
+spotify = Extension()

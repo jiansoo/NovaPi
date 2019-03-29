@@ -2,8 +2,8 @@
 # Naive Online Voice Assistant - NOVA
 
 import sys
-sys.path.append('modules')
-sys.path.append('extensions')
+sys.path.append('../modules')
+sys.path.append('../extensions')
 
 from wit import Wit
 
@@ -14,7 +14,6 @@ import snowboydecoder
 
 import signal
 import importlib
-import spotipywrapper as spw
 import os
 from bulbmanager import BulbManager
 from weather import returnForecast
@@ -34,7 +33,6 @@ wit_api_key = config['Nova']['wit_api_key']
 witClient = Wit(wit_api_key)
 
 bm = BulbManager()
-sp = spw.SpotifyWrapper()
 
 interrupted = False
 playing = False
@@ -43,8 +41,12 @@ extensions = ['spotify', 'weather']
 loaded_extensions = []
 extension_objects = []
 
+
 for i in extensions:
-    extension_objects.append(__import__(str(i)).Extension())
+    temp_ext_object = __import__(str(i)).Extension()
+    if temp_ext_object.extName == 'Spotify':
+        sp = temp_ext_object
+    extension_objects.append(temp_ext_object)
 
 print(extension_objects)
 
@@ -76,13 +78,13 @@ def ascertain_command():
         say('Good morning, Jian.')
     
     for i in extension_objects:
-        if type(i.extIntent) is list:
-            for intent in i.extIntent:
+        if type(i.intent) is list:
+            for intent in i.intent:
                 if witResponse['entities']['intent'][0]['value'] == intent:
                     i.parse(witResponse, intent)
         else:
-            if witResponse['entities']['intent'][0]['value'] == i.extIntent:
-                    i.parse(witResponse, i.extIntent)
+            if witResponse['entities']['intent'][0]['value'] == i.intent:
+                    i.parse(witResponse, i.intent)
 
     if sv.playing:
         sp.startPlayback()
