@@ -67,6 +67,7 @@ class Extension:
         hourly = FIOHourly.FIOHourly(forecaster)
         daily = FIODaily.FIODaily(forecaster)
 
+        # Gives summary of current weather conditions.
         if days == 0:
             targetDay = {'summary': hourly.summary, 'icon': hourly.icon}
             speech = hourly.summary
@@ -174,13 +175,15 @@ class Extension:
         "Have a good day!"
             ]
 
-        # Give a quip after the weather status.
+        # Give a quip based on the weather status.
         say(random.choice(opinion))
 
     def rainChance(self, location, day):
+        # Method to find rain chance given ForecastIO object.
         forecaster = self.getForecaster(location)
         daily = FIODaily.FIODaily(forecaster)
         
+        # Checks if requested day falls within data in ForecastIO object.
         if day <= daily.days():
             rainprob = daily.get_day(day)['precipProbability']*100
             if day == 0:
@@ -192,10 +195,11 @@ class Extension:
             else:
                 rainString = 'There is a ' + str(rainprob) + ' percent chance it will rain in ' + str(day) + ' days.'
         elif day < 0:
+            # Todo... add Time Machine feature from ForecastIO.
             say('Weather history is currently not supported.')
             return
         else:
-            say('Please ask for a day less than 7 days in the future.')
+            say('You can request weather information up to 7 days in the future.')
             return
 
         say(rainString)

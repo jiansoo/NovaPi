@@ -55,13 +55,17 @@ class Extension:
         self.intent = Extension.extIntent
 
     def startPlayback(self):
-        print('Started playback')
+        # Starts playback on current active device.
         self.sp.start_playback()
+        sv.playing = True
 
     def stopPlayback(self):
+        # Stops playback on current active device.
         self.sp.pause_playback()
+        sv.playing = False
 
     def searchTrack(self, sterm):
+        # Searches Spotify database for song URIs, and then starts playback.
         uri_list = []
         result = self.sp.search(sterm, type='track')
         result_uri = result['tracks']['items'][0]['uri']
@@ -70,6 +74,7 @@ class Extension:
         self.sp.start_playback(uris=uri_list)
 
     def searchPlaylist(self, sterm):
+        # Searches Spotify database for playlist URIs, and then starts playback.
         result = self.sp.search(sterm, type='playlist')
         result_uri = result['playlists']['items'][0]['uri']
         print(result_uri)
@@ -89,5 +94,3 @@ class Extension:
         elif intent == 'playPlaylist':
             playlist = witResponse['entities']['track'][0]['value']
             self.searchPlaylist(playlist)
-
-spotify = Extension()
