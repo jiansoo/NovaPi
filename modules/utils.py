@@ -1,5 +1,4 @@
 import speech_recognition as sr
-import nltk
 from pydub import AudioSegment
 from pydub.playback import play
 from gtts import gTTS
@@ -20,8 +19,8 @@ def start_speech_transcription():
     recog = sr.Recognizer()
     mic = sr.Microphone()
     
-    activate = AudioSegment.from_wav("/home/pi/Desktop/NovaPi/resources/Nova_Activated.wav")
-    error = AudioSegment.from_wav("/home/pi/Desktop/NovaPi/resources/Nova_Error.wav")
+    activate = AudioSegment.from_wav("../resources/Nova_Activated.wav")
+    error = AudioSegment.from_wav("../resources/Nova_Error.wav")
     with mic as source:
         # Adjusts sensitivity of microphone depending on background noise.
         print("Adjusting sensitivity to negate background noise.")
@@ -44,39 +43,6 @@ def start_speech_transcription():
         except:
             # Print to console in event of recognition failure.
             print('Something went wrong!')
-
-def find_and_split(full, search):
-    # This function is quite important... it looks for commands in input and parses them to find the command arguments.
-    # Functioning is quite simple, though.
-
-    # Create WhitespaceTokeniser object to perform tokenisation.
-    whitespaceTokeniser = nltk.tokenize.WhitespaceTokenizer()
-
-    # 'Tokenise' voice input according to whitespace. In other words, make it into an array.
-    tokenise_input = whitespaceTokeniser.tokenize(full)
-
-    # Searching for term in tokenised input... Lazy, but it works.
-    
-    # Special case for extensions with multiple operatives
-    if type(search) is list:
-        for term in search:
-            for i in range(len(tokenise_input)):
-                # If the search is positive, sends back the term and all words after it. Simple array slice.
-                if term == tokenise_input[i]:
-                    command_contents = tokenise_input[i+1:]
-                    return command_contents, term
-        # If there's no matching term, return None.
-        return None
-    
-    else:
-        for i in range(len(tokenise_input)):
-            # If the search is positive, sends back the term and all words after it. Simple array slice.
-            if search == tokenise_input[i]:
-                command_contents = tokenise_input[i+1:]
-                return command_contents
-
-        # If there's no matching term, return None.
-        return None
 
 def say(voiceoutput):
     print(voiceoutput)
