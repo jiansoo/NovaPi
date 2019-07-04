@@ -2,9 +2,8 @@
 # Author: Jian Soo
 # Dependencies: ForecastIOPy
 
-# Add /modules as a path variable
-import sys
-sys.path.append('../modules')
+# Add /modules as a path variable (Optional, only needed if you are trying to run the extension without running NOVA)
+# sys.path.append('fullpath to NOVA directory')
 
 # Import modules
 from forecastiopy import *

@@ -2,18 +2,16 @@
 # Author: Jian Soo
 # Dependencies: SpotiPy
 
-# Add /modules as a path variable
-import sys
-sys.path.append('../modules')
+# Add /modules as a path variable (Optional, only needed if you are trying to run the extension without running NOVA)
+# sys.path.append('fullpath to NOVA directory')
 
 # Import modules
 import spotipy.util as util
 import spotipy as spotipy
-import sharedvalues as sv
 import configparser
 config = configparser.ConfigParser()
 import os
-from utils import say
+from utils import say, print_warn, print_debug
 
 
 class Extension:
@@ -57,28 +55,27 @@ class Extension:
     def startPlayback(self):
         # Starts playback on current active device.
         self.sp.start_playback()
-        sv.playing = True
+        os.environ['playing'] = 'True'
 
     def stopPlayback(self):
         # Stops playback on current active device.
         self.sp.pause_playback()
-        sv.playing = False
 
     def searchTrack(self, sterm):
         # Searches Spotify database for song URIs, and then starts playback.
         uri_list = []
         result = self.sp.search(sterm, type='track')
         result_uri = result['tracks']['items'][0]['uri']
-        print(result_uri)
+        print_debug('Track URI '+ result_uri)
         uri_list.append(result_uri)
-        self.sp.start_playback(uris=uri_list)
+        return uri_list
 
     def searchPlaylist(self, sterm):
         # Searches Spotify database for playlist URIs, and then starts playback.
         result = self.sp.search(sterm, type='playlist')
         result_uri = result['playlists']['items'][0]['uri']
-        print(result_uri)
-        self.sp.start_playback(context_uri=result_uri)
+        print_debug('Playlist URI ' + result_uri)
+        return result_uri
     
     # General 'parse' command: interprets voice input 
     def parse(self, witResponse, intent):
@@ -87,10 +84,15 @@ class Extension:
         # Track - track/playlist name
         # Artist - artist
         # Intent - detected intent by wit.ai model
+        os.environ['playing'] = 'True'
         if intent == 'playMusic':
             track = witResponse['entities']['track'][0]['value']
             artist = witResponse['entities']['artist'][0]['value']
-            self.searchTrack(track + ' ' + artist)
+            self.sp.start_playback(uris=self.searchTrack(track + ' ' + artist))
+                
         elif intent == 'playPlaylist':
             playlist = witResponse['entities']['track'][0]['value']
-            self.searchPlaylist(playlist)
+            self.sp.start_playback(context_uri=self.searchPlaylist(playlist))
+            
+        return
+        

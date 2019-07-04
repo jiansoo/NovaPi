@@ -1,24 +1,26 @@
 #! /usr/bin/env python
 # Naive Online Voice Assistant - NOVA
 
+import os
 import sys
 
+os.environ['novapath'] = '/home/volumio/Desktop/git/NovaPi/'
 # Add /modules and /extensions as path variables
-sys.path.append('../modules')
-sys.path.append('../extensions')
+sys.path.append(os.environ['novapath']+'modules')
+sys.path.append(os.environ['novapath']+'extensions')
 
 # Import block
 from wit import Wit
 from utils import *
-import sharedvalues as sv
 import snowboydecoder
 import signal
 import importlib
-import os
+
 from bulbmanager import BulbManager
-from weather import returnForecast
 import datetime
 import configparser
+
+os.environ['playing'] = 'False'
 
 # Check for Nova entry in the config file. 
 # If none exists, makes one with the placeholder values.
@@ -70,23 +72,23 @@ def ascertain_command():
     try:
         sp.stopPlayback()
     except:
-        sv.playing = False
+        pass
     
     # Ask Google-san to transcribe voice input to text format.
     voiceInput = start_speech_transcription()
 
     # If the voiceInput is None, presume false alarm.
     # Should be a better way to handle this...
+        
     if voiceInput == None:
-        print('No speech detected.')
-        if sv.playing:
-            sp.startPlayback()
+        print_debug('No speech detected.')
         return
     
     # Sends transcribed voice input off to my Wit.ai model.
     witResponse = witClient.message(voiceInput)
 
     # Iterates through extension objects, and checks if any intents match the one returned by Wit.
+    
     for i in extension_objects:
         if type(i.intent) is list:
             for intent in i.intent:
@@ -94,16 +96,21 @@ def ascertain_command():
                     # If the intent matches, the parse command is invoked with the witResponse object and the detected intent.
                     # Waaaay better than my if-tree method.
                     i.parse(witResponse, intent)
+        elif witResponse['entities']['intent'][0]['value'] == i.intent:
+            i.parse(witResponse, i.intent)
         else:
-            if witResponse['entities']['intent'][0]['value'] == i.intent:
-                    i.parse(witResponse, i.intent)
+            print_debug('No matching intent found.')
+            
 
     # If the music was playing beforehand, try to start playback up again.
     # ... and if it fails, Playing is set to false.
-    try:
-        sp.startPlayback()
-    except:
-        sv.playing = False
+    
+    if os.environ['playing'] == 'True':
+        try:
+            sp.startPlayback()
+        except:
+            pass
+    
 
 bm.normalLight()
 
@@ -112,9 +119,9 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # Setting up hotword detection with PMDL file.
 # Change sensitivity at your own leisure - and make a PMDL file for your device for the best results.
-detector = snowboydecoder.HotwordDetector('NovaWebcam.pmdl', sensitivity=0.8)
+detector = snowboydecoder.HotwordDetector('OK Nova.pmdl', sensitivity=0.4)
 
-print('Started listening for hotword.')
+print_debug('Started listening for hotword.')
 
 # Starting detector.
 detector.start(detected_callback=ascertain_command,

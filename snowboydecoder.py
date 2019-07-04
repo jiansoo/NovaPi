@@ -17,6 +17,9 @@ RESOURCE_FILE = os.path.join(TOP_DIR, "resources/common.res")
 DETECT_DING = os.path.join(TOP_DIR, "resources/ding.wav")
 DETECT_DONG = os.path.join(TOP_DIR, "resources/dong.wav")
 
+def print_debug(message):
+    print('\033[0;37;43m DEBUG \033[0m ' + message)
+    return
 
 class RingBuffer(object):
     """Ring buffer to hold audio from PortAudio"""
@@ -188,10 +191,11 @@ class HotwordDetector(object):
                     self.recordedData.append(data)
                     silentCount = 0
                     recordingCount = 0
-                    message = "Keyword " + str(status) + " detected at time: "
+                    message = "Keyword " + str(status) + " detected at "
                     message += time.strftime("%Y-%m-%d %H:%M:%S",
                                          time.localtime(time.time()))
-                    logger.info(message)
+                    #logger.info(message)
+                    print_debug(message)
                     callback = detected_callback[status-1]
                     if callback is not None:
                         callback()
